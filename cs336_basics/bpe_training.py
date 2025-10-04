@@ -6,6 +6,7 @@ from multiprocessing import Pool
 
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
+
 def find_chunk_boundaries(
     file: BinaryIO,
     desired_num_chunks: int,
@@ -15,7 +16,9 @@ def find_chunk_boundaries(
     Chunk the file into parts that can be counted independently.
     May return fewer chunks if the boundaries end up overlapping.
     """
-    assert isinstance(split_special_token, bytes), "Must represent special token as a bytestring"
+    assert isinstance(
+        split_special_token, bytes
+    ), "Must represent special token as a bytestring"
 
     # Get total file size in bytes
     file.seek(0, os.SEEK_END)
@@ -52,6 +55,7 @@ def find_chunk_boundaries(
     # Make sure all boundaries are unique, but might be fewer than desired_num_chunks
     return sorted(set(chunk_boundaries))
 
+
 def train_bpe(
     input_path: str, vocab_size: int, special_tokens: list[str]
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
@@ -67,8 +71,16 @@ def train_bpe(
             chunks.append(chunk)
         # build pre-tokens count map concurrently
         with Pool(num_processes) as p:
-            pre_tokens_count_list = [p.apply_async(remove_special_tokens_and_pre_tokenize, (chunk, special_tokens)) for chunk in chunks]
-            [merge_pre_tokens_count(g_pre_tokens_count, pre_tokens_count.get()) for pre_tokens_count in pre_tokens_count_list]
+            pre_tokens_count_list = [
+                p.apply_async(
+                    remove_special_tokens_and_pre_tokenize, (chunk, special_tokens)
+                )
+                for chunk in chunks
+            ]
+            [
+                merge_pre_tokens_count(g_pre_tokens_count, pre_tokens_count.get())
+                for pre_tokens_count in pre_tokens_count_list
+            ]
         return merge(g_pre_tokens_count, vocab_size, special_tokens)
 
 
@@ -98,12 +110,12 @@ def merge(
         vocab[idx] = special_token.encode("utf-8")
         idx += 1
     for i in range(256):
-        vocab[idx+i] = bytes([i])
+        vocab[idx + i] = bytes([i])
 
     # counts track pre-token occurrence, key is bytes tuple, each element
     # starts from one byte, then gets merged
     counts: dict[tuple[bytes], int] = dict()
-    for _ in range(vocab_size - 257):
+    for _ in range(vocab_size - 256 - len(special_tokens)):
         for pre_token, cnt in pre_tokens_count.items():
             # count pair occurrence across all pre-tokens
             for t1, t2 in zip(pre_token, pre_token[1:]):
@@ -167,7 +179,7 @@ def remove_special_tokens_and_pre_tokenize(
     return g_pre_tokens_count
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     vocab, merges = train_bpe(
         "/Users/luyaoli/code/cs336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt",
         10000,
