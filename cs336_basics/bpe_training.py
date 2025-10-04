@@ -69,7 +69,7 @@ def train_bpe(
         with Pool(num_processes) as p:
             pre_tokens_count_list = [p.apply_async(remove_special_tokens_and_pre_tokenize, (chunk, special_tokens)) for chunk in chunks]
             [merge_pre_tokens_count(g_pre_tokens_count, pre_tokens_count.get()) for pre_tokens_count in pre_tokens_count_list]
-        return merge(g_pre_tokens_count, vocab_size)
+        return merge(g_pre_tokens_count, vocab_size, special_tokens)
 
 
 def pre_tokenize_doc(doc) -> dict[tuple[bytes], int]:
@@ -89,11 +89,16 @@ def pre_tokenize_doc(doc) -> dict[tuple[bytes], int]:
 
 
 def merge(
-    pre_tokens_count: dict[tuple[bytes], int], vocab_size
+    pre_tokens_count: dict[tuple[bytes], int], vocab_size, special_tokens
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
     merges: list[tuple[bytes, bytes]] = []
-    vocab: dict[int, bytes] = {index+1: bytes([index]) for index in range(256)}
-    vocab[0] = "<|endoftext|>".encode("utf-8")
+    vocab: dict[int, bytes] = {}
+    idx = 0
+    for special_token in special_tokens:
+        vocab[idx] = special_token.encode("utf-8")
+        idx += 1
+    for i in range(256):
+        vocab[idx+i] = bytes([i])
 
     # counts track pre-token occurrence, key is bytes tuple, each element
     # starts from one byte, then gets merged
@@ -164,8 +169,8 @@ def remove_special_tokens_and_pre_tokenize(
 
 if __name__ == '__main__':
     vocab, merges = train_bpe(
-        "/Users/luyaoli/code/cs336/assignment1-basics/tests/fixtures/corpus.en",
-        500,
+        "/Users/luyaoli/code/cs336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt",
+        10000,
         ["<|endoftext|>"],
     )
 
