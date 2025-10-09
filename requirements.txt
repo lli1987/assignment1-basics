@@ -1,2 +1,6 @@
 regex
 tiktoken
+torch~=2.6.0
+einops>=0.8.1
+einx>=0.3.0
+numpy
