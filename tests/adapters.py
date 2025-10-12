@@ -11,6 +11,7 @@ from torch import Tensor
 from cs336_basics.bpe_training import train_bpe
 from cs336_basics.bpe_encoding import Tokenizer
 from cs336_basics.layers import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
+from cs336_basics.functions import softmax, scaled_dot_product_attention
 
 
 def run_linear(
@@ -116,7 +117,7 @@ def run_scaled_dot_product_attention(
     Returns:
         Float[Tensor, " ... queries d_v"]: Output of SDPA
     """
-    raise NotImplementedError
+    return scaled_dot_product_attention(K, V, Q, mask)
 
 
 def run_multihead_self_attention(
@@ -447,7 +448,7 @@ def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, "
         Float[Tensor, "..."]: Tensor of with the same shape as `in_features` with the output of
         softmax normalizing the specified `dim`.
     """
-    raise NotImplementedError
+    return softmax(in_features, dim)
 
 
 def run_cross_entropy(
