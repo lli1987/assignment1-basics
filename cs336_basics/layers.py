@@ -3,6 +3,11 @@ import torch
 from einops import einsum
 import numpy as np
 
+from cs336_basics.functions import scaled_dot_product_attention
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 class Linear(nn.Module):
     def __init__(self, in_features, out_features, device=None, dtype=None):
@@ -148,3 +153,94 @@ class RotaryPositionalEmbedding(nn.Module):
         x_rotated[..., ::2] = x1_rot
         x_rotated[..., 1::2] = x2_rot
         return x_rotated
+
+
+class MultiHeadSelfAttention(nn.Module):
+    """
+    Args:
+        d_model (int): Dimensionality of the feedforward input and output.
+        num_heads (int): Number of heads to use in multi-headed attention.
+        max_seq_len (int): Maximum sequence length to pre-cache if your implementation does that.
+        theta (float): RoPE parameter.
+        q_proj_weight (Float[Tensor, "d_k d_in"]): Weights for the Q projection
+        k_proj_weight (Float[Tensor, "d_k d_in"]): Weights for the K projection
+        v_proj_weight (Float[Tensor, "d_k d_in"]): Weights for the V projection
+        o_proj_weight (Float[Tensor, "d_model d_v"]): Weights for the output projection
+        in_features (Float[Tensor, "... sequence_length d_in"]): Tensor to run your implementation on.
+        token_positions (Int[Tensor, " ... sequence_length"] | None): Optional tensor with the positions of the tokens
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        # theta: float,
+        # token_positions: torch.Tensor,
+    ) -> torch.Tensor:
+        super().__init__()
+        self.d_model = d_model
+        self.num_heads = num_heads
+        # self.theta = theta
+        self.q_proj_weight = self._init_weights(d_model, d_model)
+        self.k_proj_weight = self._init_weights(d_model, d_model)
+        self.v_proj_weight = self._init_weights(d_model, d_model)
+        self.o_proj_weight = self._init_weights(d_model, d_model)
+        # self.token_positions = token_positions
+        # self.rope = RotaryPositionalEmbedding(theta, d_model // 2, max_seq_len)
+
+    def _init_weights(self, d_in, d_out):
+        std = np.sqrt(2 / (d_in + d_out))
+        return nn.Parameter(
+            nn.init.trunc_normal_(
+                torch.empty(d_out, d_in),
+                mean=0,
+                std=std,
+                a=-3 * std,
+                b=3 * std,
+            )
+        )
+
+    def reshape_expand_contract(self, t: torch.Tensor):
+        batch, seq_len, d_k = t.shape
+        hd_k = d_k // self.num_heads
+        return t.view(batch, seq_len, self.num_heads, hd_k).transpose(1, 2)
+
+    def forward(self, in_features: torch.Tensor):
+        q = einsum(
+            in_features,
+            self.q_proj_weight,
+            "... sequence_length d_in, d_k d_in -> ... sequence_length d_k",
+        )
+        # q = self.rope.forward(q, self.token_positions)
+        k = einsum(
+            in_features,
+            self.k_proj_weight,
+            "... sequence_length d_in, d_k d_in -> ... sequence_length d_k",
+        )
+        # k = self.rope.forward(k, self.token_positions)
+
+        v = einsum(
+            in_features,
+            self.v_proj_weight,
+            "... sequence_length d_in, d_k d_in -> ... sequence_length d_k",
+        )
+
+        qh = self.reshape_expand_contract(q)
+        kh = self.reshape_expand_contract(k)
+        vh = self.reshape_expand_contract(v)
+
+        mask_shape = qh.shape[:-1]
+        mask_shape = mask_shape + (mask_shape[-1],)
+
+        mask = torch.tril(torch.ones(mask_shape, dtype=torch.bool), diagonal=0)
+        attn = scaled_dot_product_attention(kh, vh, qh, mask)
+        attn = attn.transpose(1, 2)
+        batch, seq_len, heads, d_k = attn.shape
+        attn = attn.contiguous().view(batch, seq_len, heads * d_k)
+
+        multiheads_attention = einsum(
+            attn,
+            self.o_proj_weight,
+            "... sequence_length dv, d_model dv  -> ... sequence_length d_model",
+        )
+        return multiheads_attention
