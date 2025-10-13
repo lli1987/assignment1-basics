@@ -174,19 +174,16 @@ class MultiHeadSelfAttention(nn.Module):
         self,
         d_model: int,
         num_heads: int,
-        # theta: float,
-        # token_positions: torch.Tensor,
+        theta: float = None,
     ) -> torch.Tensor:
         super().__init__()
         self.d_model = d_model
         self.num_heads = num_heads
-        # self.theta = theta
+        self.theta = theta
         self.q_proj_weight = self._init_weights(d_model, d_model)
         self.k_proj_weight = self._init_weights(d_model, d_model)
         self.v_proj_weight = self._init_weights(d_model, d_model)
         self.o_proj_weight = self._init_weights(d_model, d_model)
-        # self.token_positions = token_positions
-        # self.rope = RotaryPositionalEmbedding(theta, d_model // 2, max_seq_len)
 
     def _init_weights(self, d_in, d_out):
         std = np.sqrt(2 / (d_in + d_out))
@@ -205,7 +202,12 @@ class MultiHeadSelfAttention(nn.Module):
         hd_k = d_k // self.num_heads
         return t.view(batch, seq_len, self.num_heads, hd_k).transpose(1, 2)
 
-    def forward(self, in_features: torch.Tensor):
+    def forward(
+        self,
+        in_features: torch.Tensor,
+        token_positions: torch.Tensor = None,
+        max_seq_len: int = -1,
+    ):
         q = einsum(
             in_features,
             self.q_proj_weight,
@@ -228,6 +230,13 @@ class MultiHeadSelfAttention(nn.Module):
         qh = self.reshape_expand_contract(q)
         kh = self.reshape_expand_contract(k)
         vh = self.reshape_expand_contract(v)
+
+        if self.theta:
+            rope = RotaryPositionalEmbedding(
+                self.theta, self.d_model // self.num_heads, max_seq_len
+            )
+            qh = rope.forward(qh, token_positions)
+            kh = rope.forward(kh, token_positions)
 
         mask_shape = qh.shape[:-1]
         mask_shape = mask_shape + (mask_shape[-1],)

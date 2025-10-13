@@ -24,8 +24,6 @@ def scaled_dot_product_attention(
     score = einsum(query, key, "... n d_k, ... m d_k -> ... n m") / np.sqrt(dk)
     mask_val = torch.zeros(mask.shape, dtype=torch.float)
     mask_val.masked_fill_(~mask, float("-inf"))
-    logger.warning("----score DIM: " + str(score.shape))
-    logger.warning("-----mask DIM: " + str(mask.shape))
     score = softmax(score + mask_val, dim=-1)
     attention = einsum(score, value, "... n m, ... m d_v -> ... n d_v")
     return attention
