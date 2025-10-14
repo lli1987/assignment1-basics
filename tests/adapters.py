@@ -19,7 +19,10 @@ from cs336_basics.layers import (
     MultiHeadSelfAttention,
 )
 from cs336_basics.functions import softmax, scaled_dot_product_attention
-from cs336_basics.model import TransformerBlock
+from cs336_basics.model import TransformerBlock, LLM
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def run_linear(
@@ -325,7 +328,7 @@ def run_transformer_block(
         "ffn.weights3": weights["ffn.w3.weight"],
         "rms_norm2.weights": weights["ln2.weight"],
     }
-    transformer_block = TransformerBlock(d_model, num_heads, d_ff, theta)
+    transformer_block = TransformerBlock(d_model, num_heads, d_ff, theta, max_seq_len)
     transformer_block.load_state_dict(state_dict)
     return transformer_block.forward(in_features)
 
@@ -409,7 +412,49 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+
+    state_dict = {
+        "embedding.weights": weights["token_embeddings.weight"],
+        "rms_norm.weights": weights["ln_final.weight"],
+        "ln.weights": weights["lm_head.weight"],
+    }
+    llm = LLM(
+        vocab_size, context_length, num_layers, num_heads, d_model, d_ff, rope_theta
+    )
+
+    for layer in range(num_layers):
+        q_key = f"transformer_blocks.{layer}.mha.q_proj_weight"
+        q_value = weights[f"layers.{layer}.attn.q_proj.weight"]
+        k_key = f"transformer_blocks.{layer}.mha.k_proj_weight"
+        k_value = weights[f"layers.{layer}.attn.k_proj.weight"]
+        v_key = f"transformer_blocks.{layer}.mha.v_proj_weight"
+        v_value = weights[f"layers.{layer}.attn.v_proj.weight"]
+        o_key = f"transformer_blocks.{layer}.mha.o_proj_weight"
+        o_value = weights[f"layers.{layer}.attn.output_proj.weight"]
+
+        rms1_key = f"transformer_blocks.{layer}.rms_norm1.weights"
+        rms1_value = weights[f"layers.{layer}.ln1.weight"]
+        rms2_key = f"transformer_blocks.{layer}.rms_norm2.weights"
+        rms2_value = weights[f"layers.{layer}.ln2.weight"]
+
+        ffn_w1_key = f"transformer_blocks.{layer}.ffn.weights1"
+        ffn_w1_value = weights[f"layers.{layer}.ffn.w1.weight"]
+        ffn_w2_key = f"transformer_blocks.{layer}.ffn.weights2"
+        ffn_w2_value = weights[f"layers.{layer}.ffn.w2.weight"]
+        ffn_w3_key = f"transformer_blocks.{layer}.ffn.weights3"
+        ffn_w3_value = weights[f"layers.{layer}.ffn.w3.weight"]
+        state_dict[q_key] = q_value
+        state_dict[k_key] = k_value
+        state_dict[v_key] = v_value
+        state_dict[o_key] = o_value
+        state_dict[rms1_key] = rms1_value
+        state_dict[rms2_key] = rms2_value
+        state_dict[ffn_w1_key] = ffn_w1_value
+        state_dict[ffn_w2_key] = ffn_w2_value
+        state_dict[ffn_w3_key] = ffn_w3_value
+
+    llm.load_state_dict(state_dict)
+    return llm.forward(in_indices)
 
 
 def run_rmsnorm(
