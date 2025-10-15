@@ -28,3 +28,12 @@ def scaled_dot_product_attention(
     attention = einsum(score, value, "... n m, ... m d_v -> ... n d_v")
     return attention
 
+
+def cross_entropy(o: torch.Tensor, t: torch.Tensor):
+    # p's shape: [... seq_len vocab_size]
+    #  p = -torch.log(softmax(o, dim=-1))
+    o_max = o.max(dim=-1, keepdim=True).values
+    o_adjusted = o - o_max
+    p = -(o_adjusted - torch.log(torch.exp(o_adjusted).sum(dim=-1, keepdim=True)))
+    pxi = p.gather(dim=-1, index=t.unsqueeze(dim=-1)).squeeze(-1)
+    return pxi.mean()

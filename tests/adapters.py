@@ -18,7 +18,7 @@ from cs336_basics.layers import (
     RotaryPositionalEmbedding,
     MultiHeadSelfAttention,
 )
-from cs336_basics.functions import softmax, scaled_dot_product_attention
+from cs336_basics.functions import softmax, scaled_dot_product_attention, cross_entropy
 from cs336_basics.model import TransformerBlock, LLM
 import logging
 
@@ -551,7 +551,7 @@ def run_cross_entropy(
     Returns:
         Float[Tensor, ""]: The average cross-entropy loss across examples.
     """
-    raise NotImplementedError
+    return cross_entropy(inputs, targets)
 
 
 def run_gradient_clipping(
