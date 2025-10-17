@@ -20,6 +20,7 @@ from cs336_basics.layers import (
 )
 from cs336_basics.functions import softmax, scaled_dot_product_attention, cross_entropy
 from cs336_basics.model import TransformerBlock, LLM
+from cs336_basics.training import AdamW
 import logging
 
 logger = logging.getLogger(__name__)
@@ -572,7 +573,7 @@ def get_adamw_cls() -> Any:
     """
     Returns a torch.optim.Optimizer that implements AdamW.
     """
-    raise NotImplementedError
+    return AdamW
 
 
 def run_get_lr_cosine_schedule(
