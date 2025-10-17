@@ -2,6 +2,7 @@ import torch
 from einops import einsum
 import numpy as np
 import logging
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -37,3 +38,14 @@ def cross_entropy(o: torch.Tensor, t: torch.Tensor):
     p = -(o_adjusted - torch.log(torch.exp(o_adjusted).sum(dim=-1, keepdim=True)))
     pxi = p.gather(dim=-1, index=t.unsqueeze(dim=-1)).squeeze(-1)
     return pxi.mean()
+
+
+def learning_rate_schedule(t: int, a_max: float, a_min: float, t_w: int, t_c: int):
+    if t < t_w:
+        return t / t_w * a_max
+    elif t <= t_c and t >= t_w:
+        return a_min + 0.5 * (1 + math.cos((t - t_w) * math.pi / (t_c - t_w))) * (
+            a_max - a_min
+        )
+    else:
+        return a_min
