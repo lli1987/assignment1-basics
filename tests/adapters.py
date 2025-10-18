@@ -22,7 +22,8 @@ from cs336_basics.functions import (
     softmax,
     scaled_dot_product_attention,
     cross_entropy,
-    learning_rate_schedule
+    learning_rate_schedule,
+    gradient_clipping,
 )
 from cs336_basics.model import TransformerBlock, LLM
 from cs336_basics.training import AdamW
@@ -571,7 +572,7 @@ def run_gradient_clipping(
 
     The gradients of the parameters (parameter.grad) should be modified in-place.
     """
-    raise NotImplementedError
+    gradient_clipping(parameters, max_l2_norm)
 
 
 def get_adamw_cls() -> Any:
