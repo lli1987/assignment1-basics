@@ -1,4 +1,5 @@
 import torch
+from torch import nn, optim
 from einops import einsum
 import numpy as np
 import numpy.typing as npt
@@ -90,3 +91,17 @@ def data_loading(
     x1.to(device)
     x2.to(device)
     return x1, x2
+
+
+def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, iteration: int, out):
+    model_state = model.state_dict()
+    optimizer_state = optimizer.state_dict()
+    state = {"m_state": model_state, "o_state": optimizer_state, "i": iteration}
+    torch.save(state, out)
+
+
+def load_checkpoint(src, model: nn.Module, optimizer: optim.Optimizer):
+    state = torch.load(src)
+    model.load_state_dict(state.get("m_state"))
+    optimizer.load_state_dict(state.get("o_state"))
+    return state.get("i")
