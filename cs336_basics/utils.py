@@ -7,6 +7,7 @@ def get_pre_token_bytes(pre_token_group) -> bytes:
     pre_token_str = pre_token_group.group()
     return pre_token_str.encode("utf-8")
 
+
 def find_chunk_boundaries(
     file: BinaryIO,
     desired_num_chunks: int,
@@ -54,3 +55,10 @@ def find_chunk_boundaries(
 
     # Make sure all boundaries are unique, but might be fewer than desired_num_chunks
     return sorted(set(chunk_boundaries))
+
+
+# with open(
+#     "/Users/luyaoli/code/cs336/assignment1-basics/tests/fixtures/tinystories_sample.txt", "rb"
+# ) as f:
+#     boundaries = find_chunk_boundaries(f, 3, b"<|endoftext|>")
+#     print(boundaries)

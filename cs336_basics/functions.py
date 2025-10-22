@@ -1,8 +1,10 @@
 import torch
 from einops import einsum
 import numpy as np
+import numpy.typing as npt
 import logging
 import math
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -65,3 +67,26 @@ def gradient_clipping(params: list[torch.nn.Parameter], m: float):
         if l2_norm > m:
             factor = m / (l2_norm + 1e-6)
             param.grad.data.mul_(factor)
+
+
+def data_loading(
+    x: npt.NDArray, batch_size: int, context_length: int, device: str
+) -> tuple[torch.Tensor, torch.Tensor]:
+    idx = 0
+    output1 = []
+    output2 = []
+
+    used = set()
+
+    while len(used) < batch_size:
+        idx = random.randint(0, len(x) - context_length - 1)
+        if idx in used:
+            continue
+        output1.append(torch.from_numpy(x[idx : idx + context_length]))
+        output2.append(torch.from_numpy(x[idx + 1 : idx + context_length + 1]))
+        used.add(idx)
+    x1 = torch.cat(output1).reshape(batch_size, context_length)
+    x2 = torch.cat(output2).reshape(batch_size, context_length)
+    x1.to(device)
+    x2.to(device)
+    return x1, x2

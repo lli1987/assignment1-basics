@@ -24,6 +24,7 @@ from cs336_basics.functions import (
     cross_entropy,
     learning_rate_schedule,
     gradient_clipping,
+    data_loading,
 )
 from cs336_basics.model import TransformerBlock, LLM
 from cs336_basics.training import AdamW
@@ -524,7 +525,7 @@ def run_get_batch(
         is the sampled input sequences, and the second tuple item is the corresponding
         language modeling labels.
     """
-    raise NotImplementedError
+    return data_loading(dataset, batch_size, context_length, device)
 
 
 def run_softmax(in_features: Float[Tensor, " ..."], dim: int) -> Float[Tensor, " ..."]:
