@@ -36,6 +36,7 @@ def scaled_dot_product_attention(
 def cross_entropy(o: torch.Tensor, t: torch.Tensor):
     # p's shape: [... seq_len vocab_size]
     #  p = -torch.log(softmax(o, dim=-1))
+    # logger.warning(f"---------- {o.shape} -> {t.shape}")
     o_max = o.max(dim=-1, keepdim=True).values
     o_adjusted = o - o_max
     p = -(o_adjusted - torch.log(torch.exp(o_adjusted).sum(dim=-1, keepdim=True)))
