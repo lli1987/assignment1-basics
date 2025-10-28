@@ -163,3 +163,4 @@ cython_debug/
 *.zip
 
 wandb/
+model_tinystories_default
