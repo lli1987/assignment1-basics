@@ -7,7 +7,6 @@ from cs336_basics.layers import (
     Embedding,
     Linear,
 )
-from cs336_basics.functions import softmax
 import logging
 
 logger = logging.getLogger(__name__)

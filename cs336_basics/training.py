@@ -4,8 +4,27 @@ import math
 import torch
 import numpy as np
 import logging
+import wandb
+from config import tinystories_default_config
+
+config = tinystories_default_config
 
 logger = logging.getLogger(__name__)
+
+# Start a new wandb run to track this script.
+run = wandb.init(
+    # Set the wandb entity where your project will be logged (generally your team name).
+    entity="luyaoiosapp-personal",
+    # Set the wandb project where this run will be logged.
+    project="cs336_llm",
+    # Track hyperparameters and run metadata.
+    config={
+        "learning_rate": 1e-3,
+        "architecture": "LLM",
+        "dataset": config["name"],
+        "epochs": 2560,
+    },
+)
 
 
 class AdamW(Optimizer):
@@ -59,6 +78,7 @@ def train(
     d_model,
     d_ff,
     theta,
+    model_output,
     lr=1e-3,
     betas=(0.9, 0.999),
     eps=1e-8,
@@ -66,7 +86,7 @@ def train(
     iterations=1000,
 ):
     from model import LLM
-    from functions import cross_entropy, data_loading
+    from functions import cross_entropy, data_loading, save_checkpoint
     from bpe_training import train_bpe
     from bpe_encoding import Tokenizer
 
@@ -75,6 +95,7 @@ def train(
         vocab_size=vocab_size,
         special_tokens=special_tokens,
     )
+    logger.warning("++++++ BPE training finished ++++++")
 
     tokenizer = Tokenizer(vocab=vocab, merges=merges, special_tokens=special_tokens)
     with open(training_file) as f:
@@ -102,26 +123,32 @@ def train(
         eps=eps,
         weight_decay=weight_decay,
     )
-    for _ in range(iterations):
+    for it in range(iterations):
+        logger.warning(f"++++ iteration {it} started ++++")
         optimizer.zero_grad()
         o = model.forward(x=x1)
         loss = cross_entropy(o, x2)
+        run.log({"loss": loss.item()})
         loss.backward()
         optimizer.step()
+        logger.warning(f"---- iteration {it}: loss {loss} ----")
+    save_checkpoint(model, optimizer, iterations, model_output)
 
 
 if __name__ == "__main__":
+
     train(
-        training_file="/Users/luyaoli/code/cs336/assignment1-basics/tests/fixtures/tinystories_sample.txt",
-        vocab_size=10000,
-        special_tokens=["<|endoftext|>"],
-        context_length=48,
-        batch_size=5,
-        device="cpu",
-        num_layers=5,
-        num_heads=3,
-        d_model=12,
-        d_ff=20,
-        theta=10000,
-        iterations=12000
+        training_file=config["training_file"],
+        vocab_size=config["vocab_size"],
+        special_tokens=config["special_tokens"],
+        context_length=config["context_length"],
+        batch_size=config["batch_size"],
+        device=config["device"],
+        num_layers=config["num_layers"],
+        num_heads=config["num_heads"],
+        d_model=config["d_model"],
+        d_ff=config["d_ff"],
+        theta=config["theta"],
+        iterations=config["iterations"],
+        model_output=config["model_output"],
     )

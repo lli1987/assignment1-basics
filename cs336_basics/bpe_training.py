@@ -18,7 +18,7 @@ def train_bpe(
     input_path: str, vocab_size: int, special_tokens: list[str]
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
     with open(input_path, "rb") as f:
-        num_processes = 4
+        num_processes = 12
         boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
 
         g_pre_tokens_count: dict[tuple[bytes], int] = {}

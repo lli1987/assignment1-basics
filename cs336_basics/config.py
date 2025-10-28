@@ -1,0 +1,16 @@
+tinystories_default_config = {
+    "name": "tinystories_default",
+    "training_file": "/Users/luyaoli/code/cs336/assignment1-basics/tests/fixtures/tinystories_sample.txt",
+    "vocab_size": 10000,
+    "special_tokens": ["<|endoftext|>"],
+    "context_length": 256,
+    "batch_size": 32,
+    "device": "cpu",
+    "num_layers": 4,
+    "num_heads": 16,
+    "d_model": 512,
+    "d_ff": 1344,
+    "theta": 10000,
+    "iterations": 5000,
+    "model_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/model_tinystories_default",
+}

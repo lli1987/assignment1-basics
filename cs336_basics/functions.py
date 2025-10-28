@@ -78,15 +78,10 @@ def data_loading(
     output1 = []
     output2 = []
 
-    used = set()
-
-    while len(used) < batch_size:
+    for _ in range(batch_size):
         idx = random.randint(0, len(x) - context_length - 1)
-        if idx in used:
-            continue
         output1.append(torch.from_numpy(x[idx : idx + context_length]))
         output2.append(torch.from_numpy(x[idx + 1 : idx + context_length + 1]))
-        used.add(idx)
     x1 = torch.cat(output1).reshape(batch_size, context_length)
     x2 = torch.cat(output2).reshape(batch_size, context_length)
     x1.to(device)
@@ -101,8 +96,9 @@ def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, iteration: int
     torch.save(state, out)
 
 
-def load_checkpoint(src, model: nn.Module, optimizer: optim.Optimizer):
+def load_checkpoint(src, model: nn.Module, optimizer: optim.Optimizer = None):
     state = torch.load(src)
     model.load_state_dict(state.get("m_state"))
-    optimizer.load_state_dict(state.get("o_state"))
+    if optimizer:
+        optimizer.load_state_dict(state.get("o_state"))
     return state.get("i")
