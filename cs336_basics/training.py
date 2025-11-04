@@ -5,7 +5,8 @@ import torch
 import numpy as np
 import logging
 import wandb
-from config import tinystories_default_config
+from cs336_basics.config import tinystories_default_config
+from functions import learning_rate_schedule, gradient_clipping
 
 config = tinystories_default_config
 
@@ -29,16 +30,23 @@ run = wandb.init(
 
 class AdamW(Optimizer):
     def __init__(
-        self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8, weight_decay=0.01
+        self,
+        params,
+        lr=1e-3,
+        betas=(0.9, 0.999),
+        eps=1e-8,
+        weight_decay=0.01,
+        lr_scheduler=learning_rate_schedule,
     ):
         if lr < 0:
             raise ValueError(f"Invalid learning rate: {lr}")
         defaults = {"lr": lr, "beta": betas, "epsilon": eps, "lambda": weight_decay}
         super().__init__(params, defaults)
+        self.lr_scheduler = lr_scheduler
 
     def step(self, closure: Optional[Callable] = None):
         for group in self.param_groups:
-            lr = group["lr"]
+            lr_orig = group["lr"]
             beta = group["beta"]
             epsilon = group["epsilon"]
             h_lambda = group["lambda"]
@@ -49,6 +57,18 @@ class AdamW(Optimizer):
                 m = state.get("m", torch.zeros_like(p.data))
                 v = state.get("v", torch.zeros_like(p.data))
                 t = state.get("t", 1)
+                max_learning_rate = lr_orig
+                min_learning_rate = max_learning_rate * 0.01
+                warmup_iters = 5
+                cosine_cycle_iters = 5000
+                lr = self.lr_scheduler(
+                    t,
+                    max_learning_rate,
+                    min_learning_rate,
+                    warmup_iters,
+                    cosine_cycle_iters,
+                )
+                run.log({"lr": lr})
                 grad = p.grad.data  # Get the gradient of loss with respect to p.
                 m = beta[0] * m + (1 - beta[0]) * grad
                 v = beta[1] * v + (1 - beta[1]) * torch.pow(grad, 2)
@@ -79,6 +99,7 @@ def train(
     d_ff,
     theta,
     model_output,
+    memmap_output,
     lr=1e-3,
     betas=(0.9, 0.999),
     eps=1e-8,
@@ -97,11 +118,19 @@ def train(
     )
     logger.warning("++++++ BPE training finished ++++++")
 
+    n_tokens_estimate = 10_000_000_000
     tokenizer = Tokenizer(vocab=vocab, merges=merges, special_tokens=special_tokens)
+    ids = np.memmap(
+        memmap_output, dtype=int, mode="w+", shape=(n_tokens_estimate,)
+    )
+    idx = 0
     with open(training_file) as f:
-        contents = f.read()
-    ids = tokenizer.encode(contents)
-    ids = np.array(ids)
+        for id in tokenizer.encode_iterable(f):
+            ids[idx] = id
+            idx += 1
+
+    logger.warning(ids)
+
     x1, x2 = data_loading(
         x=ids, batch_size=batch_size, context_length=context_length, device=device
     )
@@ -114,6 +143,7 @@ def train(
         d_model=d_model,
         d_ff=d_ff,
         theta=theta,
+        device=device,
     )
 
     optimizer = AdamW(
@@ -130,20 +160,45 @@ def train(
         loss = cross_entropy(o, x2)
         run.log({"loss": loss.item()})
         loss.backward()
+        params = [p for p in model.parameters()]
+        gradient_clipping(params, 1.0)
         optimizer.step()
         logger.warning(f"---- iteration {it}: loss {loss} ----")
     save_checkpoint(model, optimizer, iterations, model_output)
 
 
-if __name__ == "__main__":
+def test():
+    import torch
+    import torch.nn as nn
 
+    device = torch.device("mps")
+
+    m = nn.Linear(4, 2)
+    logger.warning(f"Before:{m.weight.device}, {m.weight.shape}")
+
+    m = m.to(device)
+    logger.warning(f"After:{m.weight.device}, {m.weight.shape}")
+
+    x = torch.randn(3, 4, device=device)
+    logger.warning(m(x))
+
+
+if __name__ == "__main__":
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+        logger.warning("using Apple GPU")
+    else:
+        device = torch.device("cpu")
+        logger.warning("using Apple CPU")
+
+    # test()
     train(
         training_file=config["training_file"],
         vocab_size=config["vocab_size"],
         special_tokens=config["special_tokens"],
         context_length=config["context_length"],
         batch_size=config["batch_size"],
-        device=config["device"],
+        device=torch.device("mps"),
         num_layers=config["num_layers"],
         num_heads=config["num_heads"],
         d_model=config["d_model"],
@@ -151,4 +206,5 @@ if __name__ == "__main__":
         theta=config["theta"],
         iterations=config["iterations"],
         model_output=config["model_output"],
+        memmap_output=config["memmap_output"],
     )

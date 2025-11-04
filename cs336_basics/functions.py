@@ -18,7 +18,11 @@ def softmax(x: torch.Tensor, dim: int) -> torch.Tensor:
 
 
 def scaled_dot_product_attention(
-    key: torch.Tensor, value: torch.Tensor, query: torch.Tensor, mask: torch.Tensor
+    key: torch.Tensor,
+    value: torch.Tensor,
+    query: torch.Tensor,
+    mask: torch.Tensor,
+    device=None,
 ) -> torch.Tensor:
     #  Q (Float[Tensor, " ... n d_k"]): Query tensor
     #  K (Float[Tensor, " ... m d_k"]): Key tensor
@@ -26,7 +30,7 @@ def scaled_dot_product_attention(
     #  mask (Bool[Tensor, " ... n m"] | None): Mask tensor
     dk = query.shape[-1]
     score = einsum(query, key, "... n d_k, ... m d_k -> ... n m") / np.sqrt(dk)
-    mask_val = torch.zeros(mask.shape, dtype=torch.float)
+    mask_val = torch.zeros(mask.shape, dtype=torch.float, device=device)
     mask_val.masked_fill_(~mask, float("-inf"))
     score = softmax(score + mask_val, dim=-1)
     attention = einsum(score, value, "... n m, ... m d_v -> ... n d_v")
@@ -82,10 +86,9 @@ def data_loading(
         idx = random.randint(0, len(x) - context_length - 1)
         output1.append(torch.from_numpy(x[idx : idx + context_length]))
         output2.append(torch.from_numpy(x[idx + 1 : idx + context_length + 1]))
-    x1 = torch.cat(output1).reshape(batch_size, context_length)
-    x2 = torch.cat(output2).reshape(batch_size, context_length)
-    x1.to(device)
-    x2.to(device)
+    x1 = torch.cat(output1).reshape(batch_size, context_length).to(device=device)
+    x2 = torch.cat(output2).reshape(batch_size, context_length).to(device=device)
+
     return x1, x2
 
 

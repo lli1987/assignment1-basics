@@ -12,13 +12,13 @@ logger = logging.getLogger(__name__)
 class Linear(nn.Module):
     def __init__(self, in_features, out_features, device=None, dtype=None):
         super().__init__()
-        self.weights = self._init_weights(in_features, out_features)
+        self.weights = self._init_weights(in_features, out_features, device)
 
-    def _init_weights(self, in_features, out_features):
+    def _init_weights(self, in_features, out_features, device):
         std = np.sqrt(2 / (in_features + out_features))
         return nn.Parameter(
             nn.init.trunc_normal_(
-                torch.empty(out_features, in_features),
+                torch.empty(out_features, in_features, device=device),
                 mean=0,
                 std=std,
                 a=-3 * std,
@@ -33,12 +33,16 @@ class Linear(nn.Module):
 class Embedding(nn.Module):
     def __init__(self, num_embeddings, embedding_dim, device=None, dtype=None):
         super().__init__()
-        self.weights = self._init_weights(num_embeddings, embedding_dim)
+        self.weights = self._init_weights(num_embeddings, embedding_dim, device)
 
-    def _init_weights(self, num_embeddings, embedding_dim):
+    def _init_weights(self, num_embeddings, embedding_dim, device):
         return nn.Parameter(
             nn.init.trunc_normal_(
-                torch.empty(num_embeddings, embedding_dim), mean=0, std=1, a=-3, b=-3
+                torch.empty(num_embeddings, embedding_dim, device=device),
+                mean=0,
+                std=1,
+                a=-3,
+                b=-3,
             )
         )
 
@@ -49,7 +53,7 @@ class Embedding(nn.Module):
 class RMSNorm(nn.Module):
     def __init__(self, d_model: int, eps: float = 1e-5, device=None, dtype=None):
         super().__init__()
-        self.weights = nn.Parameter(nn.init.ones_(torch.empty(d_model)))
+        self.weights = nn.Parameter(nn.init.ones_(torch.empty(d_model, device=device)))
         self.eps = eps
         self.d_model = d_model
 
@@ -83,19 +87,19 @@ class RMSNorm(nn.Module):
 
 
 class SwiGLU(nn.Module):
-    def __init__(self, d_model):
+    def __init__(self, d_model, device=None):
         super().__init__()
         self.d_model = d_model
         self.d_ff = int((8 / 3 * d_model // 64) * 64)
-        self.weights1 = self._init_weights(d_model, self.d_ff)
-        self.weights2 = self._init_weights(self.d_ff, d_model)
-        self.weights3 = self._init_weights(d_model, self.d_ff)
+        self.weights1 = self._init_weights(d_model, self.d_ff, device)
+        self.weights2 = self._init_weights(self.d_ff, d_model, device)
+        self.weights3 = self._init_weights(d_model, self.d_ff, device)
 
-    def _init_weights(self, d_in, d_out):
+    def _init_weights(self, d_in, d_out, device):
         std = np.sqrt(2 / (d_in + d_out))
         return nn.Parameter(
             nn.init.trunc_normal_(
-                torch.empty(d_out, d_in),
+                torch.empty(d_out, d_in, device=device),
                 mean=0,
                 std=std,
                 a=-3 * std,
@@ -122,12 +126,14 @@ class RotaryPositionalEmbedding(nn.Module):
         self.theta = theta
         self.d_k = d_k
         self.max_seq_len = max_seq_len
-        self.register_buffer("invert_freq", self._gen_invert_freq(), persistent=False)
+        self.register_buffer(
+            "invert_freq", self._gen_invert_freq(device), persistent=False
+        )
 
-    def _gen_invert_freq(self):
+    def _gen_invert_freq(self, device):
         half = self.d_k // 2
         # pos = torch.arange(0, self.max_seq_len).float()
-        k = torch.arange(1, half + 1)
+        k = torch.arange(1, half + 1, device=device)
         invert_freq = 1.0 / (self.theta ** ((2 * k - 2) / self.d_k))  # [d_k // 2]
         return invert_freq
 
@@ -171,25 +177,23 @@ class MultiHeadSelfAttention(nn.Module):
     """
 
     def __init__(
-        self,
-        d_model: int,
-        num_heads: int,
-        theta: float = None,
+        self, d_model: int, num_heads: int, theta: float = None, device=None
     ) -> torch.Tensor:
         super().__init__()
         self.d_model = d_model
         self.num_heads = num_heads
         self.theta = theta
-        self.q_proj_weight = self._init_weights(d_model, d_model)
-        self.k_proj_weight = self._init_weights(d_model, d_model)
-        self.v_proj_weight = self._init_weights(d_model, d_model)
-        self.o_proj_weight = self._init_weights(d_model, d_model)
+        self.device = device
+        self.q_proj_weight = self._init_weights(d_model, d_model, device)
+        self.k_proj_weight = self._init_weights(d_model, d_model, device)
+        self.v_proj_weight = self._init_weights(d_model, d_model, device)
+        self.o_proj_weight = self._init_weights(d_model, d_model, device)
 
-    def _init_weights(self, d_in, d_out):
+    def _init_weights(self, d_in, d_out, device):
         std = np.sqrt(2 / (d_in + d_out))
         return nn.Parameter(
             nn.init.trunc_normal_(
-                torch.empty(d_out, d_in),
+                torch.empty(d_out, d_in, device=device),
                 mean=0,
                 std=std,
                 a=-3 * std,
@@ -233,7 +237,10 @@ class MultiHeadSelfAttention(nn.Module):
 
         if self.theta:
             rope = RotaryPositionalEmbedding(
-                self.theta, self.d_model // self.num_heads, max_seq_len
+                self.theta,
+                self.d_model // self.num_heads,
+                max_seq_len,
+                device=self.device,
             )
             qh = rope.forward(qh, token_positions)
             kh = rope.forward(kh, token_positions)
@@ -241,8 +248,8 @@ class MultiHeadSelfAttention(nn.Module):
         mask_shape = qh.shape[:-1]
         mask_shape = mask_shape + (mask_shape[-1],)
 
-        mask = torch.tril(torch.ones(mask_shape, dtype=torch.bool), diagonal=0)
-        attn = scaled_dot_product_attention(kh, vh, qh, mask)
+        mask = torch.tril(torch.ones(mask_shape, dtype=torch.bool, device=self.device), diagonal=0)
+        attn = scaled_dot_product_attention(kh, vh, qh, mask, self.device)
         attn = attn.transpose(1, 2)
         batch, seq_len, heads, d_k = attn.shape
         attn = attn.contiguous().view(batch, seq_len, heads * d_k)
