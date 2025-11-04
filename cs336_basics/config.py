@@ -11,6 +11,8 @@ tinystories_default_config = {
     "d_ff": 1344,
     "theta": 10000,
     "iterations": 5000,
-    "model_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/model_tinystories_default_with_lr_schedule_g_clipping",
-    "memmap_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/model_tinystories_default_memmap_output",
+    "model_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/output/model_tinystories_default_with_lr_schedule_g_clipping",
+    "memmap_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/model_tinystories_default_memmap_output",
+    "checkpoint_path": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/checkpoint_tinystories_default_with_lr_schedule_g_clipping",
+    "checkpoint_freq": 10
 }

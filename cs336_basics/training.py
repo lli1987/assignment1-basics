@@ -6,7 +6,13 @@ import numpy as np
 import logging
 import wandb
 from cs336_basics.config import tinystories_default_config
-from functions import learning_rate_schedule, gradient_clipping
+from functions import (
+    learning_rate_schedule,
+    gradient_clipping,
+    checkpoint_exist,
+    delete_checkpoint,
+    load_checkpoint,
+)
 
 config = tinystories_default_config
 
@@ -100,6 +106,8 @@ def train(
     theta,
     model_output,
     memmap_output,
+    checkpoint_path,
+    checkpoint_freq,
     lr=1e-3,
     betas=(0.9, 0.999),
     eps=1e-8,
@@ -120,16 +128,12 @@ def train(
 
     n_tokens_estimate = 10_000_000_000
     tokenizer = Tokenizer(vocab=vocab, merges=merges, special_tokens=special_tokens)
-    ids = np.memmap(
-        memmap_output, dtype=int, mode="w+", shape=(n_tokens_estimate,)
-    )
+    ids = np.memmap(memmap_output, dtype=int, mode="w+", shape=(n_tokens_estimate,))
     idx = 0
     with open(training_file) as f:
         for id in tokenizer.encode_iterable(f):
             ids[idx] = id
             idx += 1
-
-    logger.warning(ids)
 
     x1, x2 = data_loading(
         x=ids, batch_size=batch_size, context_length=context_length, device=device
@@ -153,7 +157,10 @@ def train(
         eps=eps,
         weight_decay=weight_decay,
     )
-    for it in range(iterations):
+    it = 0
+    if checkpoint_exist(checkpoint_path):
+        it = load_checkpoint(checkpoint_path, model, optimizer)
+    while it < iterations:
         logger.warning(f"++++ iteration {it} started ++++")
         optimizer.zero_grad()
         o = model.forward(x=x1)
@@ -164,7 +171,11 @@ def train(
         gradient_clipping(params, 1.0)
         optimizer.step()
         logger.warning(f"---- iteration {it}: loss {loss} ----")
+        if it % checkpoint_freq == 0:
+            save_checkpoint(model, optimizer, it, checkpoint_path)
+        it += 1
     save_checkpoint(model, optimizer, iterations, model_output)
+    delete_checkpoint(checkpoint_path)
 
 
 def test():
@@ -207,4 +218,6 @@ if __name__ == "__main__":
         iterations=config["iterations"],
         model_output=config["model_output"],
         memmap_output=config["memmap_output"],
+        checkpoint_path=config["checkpoint_path"],
+        checkpoint_freq=config["checkpoint_freq"],
     )

@@ -163,6 +163,5 @@ cython_debug/
 *.zip
 
 wandb/
-model_tinystories_default
-model_tinystories_default_memmap_output
-model_tinystories_default_with_lr_schedule_g_clipping
+tmp/
+output/

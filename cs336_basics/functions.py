@@ -6,6 +6,7 @@ import numpy.typing as npt
 import logging
 import math
 import random
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -105,3 +106,19 @@ def load_checkpoint(src, model: nn.Module, optimizer: optim.Optimizer = None):
     if optimizer:
         optimizer.load_state_dict(state.get("o_state"))
     return state.get("i")
+
+
+def delete_checkpoint(checkpoint_path):
+    try:
+        os.remove(checkpoint_path)
+        logger.info(f"File '{checkpoint_path}' deleted successfully.")
+    except FileNotFoundError:
+        logger.error(f"Error: File '{checkpoint_path}' not found.")
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
+
+def checkpoint_exist(checkpoint_path):
+    if os.path.exists(checkpoint_path):
+        return True
+    else:
+        return False
