@@ -134,7 +134,11 @@ def train(
         for id in tokenizer.encode_iterable(f):
             ids[idx] = id
             idx += 1
+    ids.flush()
+    del ids
 
+    ids = np.memmap(memmap_output, dtype=int, mode="r")[:idx]
+    logger.warning(ids)
     x1, x2 = data_loading(
         x=ids, batch_size=batch_size, context_length=context_length, device=device
     )

@@ -15,15 +15,16 @@ def generate_tokens(
     top_p: int,
     model: torch.nn.Module,
     tokenizer: Tokenizer,
+    context_length: int,
 ) -> torch.Tensor:
     ids = tokenizer.encode(prompt)
     ids = torch.tensor(ids, dtype=torch.int).reshape(1, len(ids))
-    ids = ids[:, -48:]
+    ids = ids[:, -context_length:]
     p_list = [id for id in ids[0].tolist()]
     text_list = [word for word in tokenizer.decode(p_list)]
 
     for _ in range(max_tokens):
-        ids = ids[:, -48:]  # get max of context_length tokens
+        ids = ids[:, -context_length:]  # get max of context_length tokens
         v = model.forward(ids)  # calculate logits from LLM
         v = v[:, -1, :]  # get last token only
         p = softmax(v / temperature, -1)
@@ -80,14 +81,15 @@ if __name__ == "__main__":
         theta=config["theta"],
     )
     load_checkpoint(
-        src="/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/model_tinystories_default",
+        src="/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/output/model_tinystories_default_with_lr_schedule_g_clipping",
         model=model,
     )
     generate_tokens(
-        prompt="Once upon a time",
-        max_tokens=100,
+        prompt="Once upon a time, there was a pretty",
+        max_tokens=150,
         temperature=0.5,
         top_p=0.5,
         model=model,
         tokenizer=tokenizer,
+        context_length=config["context_length"],
     )
