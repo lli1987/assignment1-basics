@@ -43,6 +43,12 @@ class TransformerBlock(nn.Module):
         x = self.rms_norm2.forward(x)
         return x_orig + self.ffn.forward(x)
 
+        # post norm
+        # token_positions = torch.arange(0, x.shape[-2], 1, device=self.device)
+        # x = x + self.mha.forward(x, token_positions)
+        # x = self.rms_norm1.forward(x)
+        # return self.rms_norm2.forward(x + self.ffn.forward(x))
+
 
 class LLM(nn.Module):
     def __init__(

@@ -59,9 +59,9 @@ def generate_tokens(
 
 
 if __name__ == "__main__":
-    from config import tinystories_default_config
+    from config import tinystories_no_rope_config
 
-    config = tinystories_default_config
+    config = tinystories_no_rope_config
     vocab, merges = train_bpe(
         input_path=config["training_file"],
         vocab_size=config["vocab_size"],
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         theta=config["theta"],
     )
     load_checkpoint(
-        src="/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/output/model_tinystories_default_with_lr_schedule_g_clipping",
+        src=config["model_output"],
         model=model,
     )
     generate_tokens(

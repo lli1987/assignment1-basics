@@ -5,7 +5,12 @@ import torch
 import numpy as np
 import logging
 import wandb
-from cs336_basics.config import tinystories_default_config
+from cs336_basics.config import (
+    tinystories_post_norm_config,
+    tinystories_default_config,
+    tinystories_layer_ablation_config,
+    tinystories_no_rope_config
+)
 from functions import (
     learning_rate_schedule,
     gradient_clipping,
@@ -14,7 +19,7 @@ from functions import (
     load_checkpoint,
 )
 
-config = tinystories_default_config
+config = tinystories_no_rope_config
 
 logger = logging.getLogger(__name__)
 
