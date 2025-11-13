@@ -9,7 +9,8 @@ from cs336_basics.config import (
     tinystories_post_norm_config,
     tinystories_default_config,
     tinystories_layer_ablation_config,
-    tinystories_no_rope_config
+    tinystories_no_rope_config,
+    tinystories_silu_config,
 )
 from functions import (
     learning_rate_schedule,
@@ -19,7 +20,7 @@ from functions import (
     load_checkpoint,
 )
 
-config = tinystories_no_rope_config
+config = tinystories_silu_config
 
 logger = logging.getLogger(__name__)
 

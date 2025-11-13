@@ -4,6 +4,7 @@ from cs336_basics.layers import (
     MultiHeadSelfAttention,
     RMSNorm,
     SwiGLU,
+    SiLU,
     Embedding,
     Linear,
 )
@@ -32,7 +33,7 @@ class TransformerBlock(nn.Module):
         self.rms_norm1 = RMSNorm(d_model, device=device)
         self.rms_norm2 = RMSNorm(d_model, device=device)
         self.mha = MultiHeadSelfAttention(d_model, num_heads, theta, device=device)
-        self.ffn = SwiGLU(d_model, device=device)
+        self.ffn = SiLU(d_model, device=device)
 
     def forward(self, x: torch.Tensor):
         x_orig = x

@@ -120,6 +120,35 @@ class SwiGLU(nn.Module):
         )
 
 
+class SiLU(nn.Module):
+    def __init__(self, d_model, device=None):
+        super().__init__()
+        self.d_model = d_model
+        self.d_ff = 4 * d_model
+        self.weights1 = self._init_weights(d_model, self.d_ff, device)
+        self.weights2 = self._init_weights(self.d_ff, d_model, device)
+
+    def _init_weights(self, d_in, d_out, device):
+        std = np.sqrt(2 / (d_in + d_out))
+        return nn.Parameter(
+            nn.init.trunc_normal_(
+                torch.empty(d_out, d_in, device=device),
+                mean=0,
+                std=std,
+                a=-3 * std,
+                b=3 * std,
+            )
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x = [... d_model]
+        # w1 = [d_ff d_model]
+        # w2 = [d_model d_ff]
+        w1x = einsum(self.weights1, x, "d_ff d_model, ... d_model -> ... d_ff")
+        silu = torch.sigmoid(w1x) * w1x
+        return einsum(self.weights2, silu, "d_model d_ff, ... d_ff -> ... d_model")
+
+
 class RotaryPositionalEmbedding(nn.Module):
     def __init__(self, theta: float, d_k: int, max_seq_len: int, device=None):
         super().__init__()
@@ -248,7 +277,9 @@ class MultiHeadSelfAttention(nn.Module):
         mask_shape = qh.shape[:-1]
         mask_shape = mask_shape + (mask_shape[-1],)
 
-        mask = torch.tril(torch.ones(mask_shape, dtype=torch.bool, device=self.device), diagonal=0)
+        mask = torch.tril(
+            torch.ones(mask_shape, dtype=torch.bool, device=self.device), diagonal=0
+        )
         attn = scaled_dot_product_attention(kh, vh, qh, mask, self.device)
         attn = attn.transpose(1, 2)
         batch, seq_len, heads, d_k = attn.shape

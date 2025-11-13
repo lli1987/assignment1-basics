@@ -14,8 +14,28 @@ tinystories_default_config = {
     "model_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/output/model_tinystories_default_with_lr_schedule_g_clipping",
     "memmap_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/model_tinystories_default_memmap_output",
     "checkpoint_path": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/checkpoint_tinystories_default_with_lr_schedule_g_clipping",
-    "checkpoint_freq": 10
+    "checkpoint_freq": 10,
 }
+
+tinystories_silu_config = {
+    "name": "tinystories_silu",
+    "training_file": "/Users/luyaoli/code/cs336/assignment1-basics/tests/fixtures/tinystories_sample.txt",
+    "vocab_size": 10000,
+    "special_tokens": ["<|endoftext|>"],
+    "context_length": 256,
+    "batch_size": 32,
+    "num_layers": 4,
+    "num_heads": 16,
+    "d_model": 512,
+    "d_ff": 2048,
+    "theta": 10000,
+    "iterations": 1000,
+    "model_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/output/model_tinystories_silu",
+    "memmap_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/model_tinystories_silu_memmap_output",
+    "checkpoint_path": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/checkpoint_tinystories_silu",
+    "checkpoint_freq": 10,
+}
+
 
 tinystories_post_norm_config = {
     "name": "tinystories_post_norm",
@@ -33,7 +53,7 @@ tinystories_post_norm_config = {
     "model_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/output/model_tinystories_post_norm",
     "memmap_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/model_tinystories_post_norm_memmap_output",
     "checkpoint_path": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/checkpoint_tinystories_post_norm",
-    "checkpoint_freq": 10
+    "checkpoint_freq": 10,
 }
 
 tinystories_no_rope_config = {
@@ -52,7 +72,7 @@ tinystories_no_rope_config = {
     "model_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/output/model_tinystories_no_rope",
     "memmap_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/model_tinystories_no_rope_memmap_output",
     "checkpoint_path": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/checkpoint_tinystories_no_rope",
-    "checkpoint_freq": 10
+    "checkpoint_freq": 10,
 }
 
 tinystories_layer_ablation_config = {
@@ -71,6 +91,5 @@ tinystories_layer_ablation_config = {
     "model_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/output/model_tinystories_layer_ablation_with_lr_schedule_g_clipping",
     "memmap_output": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/model_tinystories_layer_ablation_memmap_output",
     "checkpoint_path": "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp/checkpoint_tinystories_layer_ablation_with_lr_schedule_g_clipping",
-    "checkpoint_freq": 10
+    "checkpoint_freq": 10,
 }
-
