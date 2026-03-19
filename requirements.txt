@@ -1,8 +1,10 @@
 regex
 tiktoken
-torch~=2.6.0
+torch~=2.9.0
 einops>=0.8.1
 einx>=0.3.0
 numpy
 wandb
-datasets==2.21.0
+datasets
+google-cloud-bigquery-storage<3.0.0,>=2.30.0
+fsspec==2025.3.0
