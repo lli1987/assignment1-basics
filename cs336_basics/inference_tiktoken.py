@@ -60,21 +60,13 @@ def generate_tokens(
 
 if __name__ == "__main__":
     from config import openwebtext_tiktoken_config
+    import tiktoken
 
     config = openwebtext_tiktoken_config
-    vocab, merges = train_bpe(
-        name=config["name"],
-        input_paths=config["training_file"],
-        vocab_size=config["vocab_size"],
-        special_tokens=config["special_tokens"],
-        enable_cache=True,
-    )
-
-    tokenizer = Tokenizer(
-        vocab=vocab, merges=merges, special_tokens=config["special_tokens"]
-    )
+    tokenizer = tiktoken.get_encoding("gpt2")
+    vocab_size = tokenizer.n_vocab
     model = LLM(
-        vocab_size=config["vocab_size"],
+        vocab_size=vocab_size,
         context_length=config["context_length"],
         num_layers=config["num_layers"],
         num_heads=config["num_heads"],
@@ -87,10 +79,10 @@ if __name__ == "__main__":
         model=model,
     )
     generate_tokens(
-        prompt="The Brief Newsletter",
-        max_tokens=500,
-        temperature=0.1,
-        top_p=0.9,
+        prompt="How many people in US?",
+        max_tokens=100,
+        temperature=1.0,
+        top_p=0.95,
         model=model,
         tokenizer=tokenizer,
         context_length=config["context_length"],

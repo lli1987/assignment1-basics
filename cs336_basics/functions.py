@@ -77,20 +77,35 @@ def gradient_clipping(params: list[torch.nn.Parameter], m: float):
 
 
 def data_loading(
-    x: npt.NDArray, batch_size: int, context_length: int, device: str
+    x: torch.Tensor, batch_size: int, context_length: int, device: str
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    idx = 0
-    output1 = []
-    output2 = []
+    # idx = 0
+    # output1 = []
+    # output2 = []
 
-    for _ in range(batch_size):
-        idx = random.randint(0, len(x) - context_length - 1)
-        output1.append(torch.from_numpy(x[idx : idx + context_length]))
-        output2.append(torch.from_numpy(x[idx + 1 : idx + context_length + 1]))
-    x1 = torch.cat(output1).reshape(batch_size, context_length).to(device=device)
-    x2 = torch.cat(output2).reshape(batch_size, context_length).to(device=device)
+    # for _ in range(batch_size):
+    #     idx = random.randint(0, len(x) - context_length - 1)
+    #     output1.append(torch.from_numpy(x[idx : idx + context_length].copy()))
+    #     output2.append(torch.from_numpy(x[idx + 1 : idx + context_length + 1].copy()))
+    # x1 = torch.cat(output1).reshape(batch_size, context_length).to(device=device)
+    # x2 = torch.cat(output2).reshape(batch_size, context_length).to(device=device)
 
-    return x1, x2
+    # return x1, x2
+
+    # Convert once if needed
+
+    # Sample all start indices at once
+    max_idx = x.shape[0] - context_length
+    idx = torch.randint(0, max_idx, (batch_size,))
+
+    # Create offsets [0, 1, ..., context_length-1]
+    offsets = torch.arange(context_length)
+
+    # Shape: (batch_size, context_length)
+    x1 = x[idx[:, None] + offsets[None, :]]
+    x2 = x[idx[:, None] + offsets[None, :] + 1]
+
+    return x1.to(device), x2.to(device)
 
 
 def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, iteration: int, out):

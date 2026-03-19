@@ -1,6 +1,8 @@
 import os
 from typing import BinaryIO
-import re
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def get_pre_token_bytes(pre_token_group) -> bytes:
@@ -32,6 +34,7 @@ def find_chunk_boundaries(
     # Chunks start on previous index, don't include last index
     chunk_boundaries = [i * chunk_size for i in range(desired_num_chunks + 1)]
     chunk_boundaries[-1] = file_size
+    #logger.warning(f"chunks before adjust: {chunk_boundaries}")
 
     mini_chunk_size = 4096  # Read ahead by 4k bytes at a time
 
@@ -52,7 +55,7 @@ def find_chunk_boundaries(
                 chunk_boundaries[bi] = initial_position + found_at
                 break
             initial_position += mini_chunk_size
-
+    #logger.warning(f"chunks after adjust: {chunk_boundaries}")
     # Make sure all boundaries are unique, but might be fewer than desired_num_chunks
     return sorted(set(chunk_boundaries))
 

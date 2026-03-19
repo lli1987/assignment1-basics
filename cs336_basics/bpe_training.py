@@ -6,6 +6,9 @@ from cs336_basics.utils import (
     get_pre_token_bytes,
 )
 import cs336_basics.constants as constants
+import logging
+
+logger = logging.getLogger(__name__)
 
 # from utils import (
 #     find_chunk_boundaries,
@@ -13,33 +16,83 @@ import cs336_basics.constants as constants
 # )
 # import constants as constants
 
+SERIALIZE_FILE_PATH = "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/tmp"
+G_PRE_TOKEN_COUNT_PKL = "test_g_pre_tokens_count.pkl"
+VOCAB_PKL = "test_vocab.pkl"
+MERGES_PKL = "test_merges.pkl"
+
+
+def prefix_with_name(name, pkl):
+    return f"{name}_{pkl}"
+
+
+def serialize_bpe(obj, file):
+    import pickle
+
+    with open(SERIALIZE_FILE_PATH + "/" + file, "wb") as f:
+        pickle.dump(obj, f)
+
+
+def deserialize_bpe(file):
+    import pickle
+
+    try:
+        with open(SERIALIZE_FILE_PATH + "/" + file, "rb") as f:
+            loaded_obj = pickle.load(f)
+        return loaded_obj
+    except Exception as e:
+        logger.warning(f"cannot deserialize: {e}")
+        return None
+
 
 def train_bpe(
-    input_path: str, vocab_size: int, special_tokens: list[str]
+    name, input_paths: list[str], vocab_size: int, special_tokens: list[str]
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
-    with open(input_path, "rb") as f:
-        num_processes = 12
-        boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
+    loaded_vocab = deserialize_bpe(prefix_with_name(name, VOCAB_PKL))
+    loaded_merges = deserialize_bpe(prefix_with_name(name, MERGES_PKL))
 
-        g_pre_tokens_count: dict[tuple[bytes], int] = {}
-        chunks = []
-        for start, end in zip(boundaries[:-1], boundaries[1:]):
-            f.seek(start)
-            chunk = f.read(end - start).decode("utf-8", errors="ignore")
-            chunks.append(chunk)
-        # build pre-tokens count map concurrently
-        with Pool(num_processes) as p:
-            pre_tokens_count_list = [
-                p.apply_async(
-                    remove_special_tokens_and_pre_tokenize, (chunk, special_tokens)
-                )
-                for chunk in chunks
-            ]
-            [
-                merge_pre_tokens_count(g_pre_tokens_count, pre_tokens_count.get())
-                for pre_tokens_count in pre_tokens_count_list
-            ]
-        return merge(g_pre_tokens_count, vocab_size, special_tokens)
+    if loaded_vocab and loaded_merges:
+        return loaded_vocab, loaded_merges
+
+    g_pre_tokens_count: dict[tuple[bytes], int] = {}
+    loaded_g_pre_tokens_count = deserialize_bpe(
+        prefix_with_name(name, G_PRE_TOKEN_COUNT_PKL)
+    )
+    if not loaded_g_pre_tokens_count:
+        idx = -1
+        for input_path in input_paths:
+            idx += 1
+            with open(input_path, "rb") as f:
+                num_processes = 12
+                boundaries = find_chunk_boundaries(f, num_processes, b"<|endoftext|>")
+
+                chunks = []
+                for start, end in zip(boundaries[:-1], boundaries[1:]):
+                    f.seek(start)
+                    chunk = f.read(end - start).decode("utf-8", errors="ignore")
+                    chunks.append(chunk)
+                # build pre-tokens count map concurrently
+                with Pool(num_processes) as p:
+
+                    pre_tokens_count_list = [
+                        p.apply_async(
+                            remove_special_tokens_and_pre_tokenize,
+                            (chunk, special_tokens),
+                        )
+                        for chunk in chunks
+                    ]
+                    [
+                        merge_pre_tokens_count(
+                            g_pre_tokens_count, pre_tokens_count.get()
+                        )
+                        for pre_tokens_count in pre_tokens_count_list
+                    ]
+            logger.warning(f"Finished processing file {idx}: {input_path}")
+        logger.warning(g_pre_tokens_count)
+        serialize_bpe(g_pre_tokens_count, prefix_with_name(name, G_PRE_TOKEN_COUNT_PKL))
+    else:
+        g_pre_tokens_count = loaded_g_pre_tokens_count
+    return merge(name, g_pre_tokens_count, vocab_size, special_tokens)
 
 
 def pre_tokenize_doc(doc) -> dict[tuple[bytes], int]:
@@ -58,7 +111,7 @@ def pre_tokenize_doc(doc) -> dict[tuple[bytes], int]:
 
 
 def merge(
-    pre_tokens_count: dict[tuple[bytes], int], vocab_size, special_tokens
+    name, pre_tokens_count: dict[tuple[bytes], int], vocab_size, special_tokens
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
     merges: list[tuple[bytes, bytes]] = []
     vocab: dict[int, bytes] = {}
@@ -72,7 +125,8 @@ def merge(
     # counts track pre-token occurrence, key is bytes tuple, each element
     # starts from one byte, then gets merged
     counts: dict[tuple[bytes], int] = dict()
-    for _ in range(vocab_size - 256 - len(special_tokens)):
+    for i in range(vocab_size - 256 - len(special_tokens)):
+        logger.warning(f"Iteration {i}...")
         for pre_token, cnt in pre_tokens_count.items():
             # count pair occurrence across all pre-tokens
             for t1, t2 in zip(pre_token, pre_token[1:]):
@@ -109,6 +163,8 @@ def merge(
                 new_pre_tokens_count[tuple(new_pre_token)] = cnt
             pre_tokens_count = new_pre_tokens_count
             counts.clear()
+    serialize_bpe(vocab, prefix_with_name(name, VOCAB_PKL))
+    serialize_bpe(merges, prefix_with_name(name, MERGES_PKL))
     return vocab, merges
 
 

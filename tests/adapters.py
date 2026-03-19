@@ -8,8 +8,8 @@ import numpy.typing as npt
 import torch
 from jaxtyping import Bool, Float, Int
 from torch import Tensor
-from cs336_basics.bpe_training import train_bpe
-from cs336_basics.bpe_encoding import Tokenizer
+from cs336_basics.bpe_training_3 import train_bpe
+from cs336_basics.bpe_encoding_3 import Tokenizer
 from cs336_basics.layers import (
     Linear,
     Embedding,
@@ -29,7 +29,8 @@ from cs336_basics.functions import (
     load_checkpoint,
 )
 from cs336_basics.model import TransformerBlock, LLM
-from cs336_basics.training import AdamW
+
+from cs336_basics.optimizers import AdamW
 import logging
 
 logger = logging.getLogger(__name__)
@@ -707,5 +708,11 @@ def run_train_bpe(
                 Merges are ordered by order of creation.
     """
     return train_bpe(
-        input_path=input_path, vocab_size=vocab_size, special_tokens=special_tokens
+        name="test",
+        input_paths=[input_path],
+        vocab_size=vocab_size,
+        special_tokens=special_tokens,
+        num_counter_processes=2,
+        num_merge_processes=1,
+        num_chunks=10,
     )

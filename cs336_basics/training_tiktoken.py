@@ -6,11 +6,11 @@ import wandb
 import regex as re
 from cs336_basics.model import LLM
 from cs336_basics.functions import cross_entropy, data_loading, save_checkpoint
-from cs336_basics.bpe_training_2 import train_bpe
-from cs336_basics.bpe_encoding_2 import Tokenizer
-from cs336_basics.optimizers import AdamW
+from cs336_basics.bpe_encoding_3 import Tokenizer
+# from cs336_basics.optimizers import AdamW
+from torch.optim import AdamW
 
-from cs336_basics.config import openwebtext_config
+from cs336_basics.config import openwebtext_tiktoken_config
 
 
 from cs336_basics.utils import find_chunk_boundaries
@@ -40,16 +40,13 @@ from cs336_basics.functions import (
 # )
 
 
-config = openwebtext_config
+config = openwebtext_tiktoken_config
 
 logger = logging.getLogger(__name__)
 
 
 def train(
-    name,
     training_files,
-    vocab_size,
-    special_tokens,
     context_length,
     batch_size,
     device,
@@ -73,7 +70,7 @@ def train(
         # Set the wandb entity where your project will be logged (generally your team name).
         entity="luyaoiosapp-personal",
         # Set the wandb project where this run will be logged.
-        project="cs336_llm",
+        project="cs336_llm_tiktoken",
         # Track hyperparameters and run metadata.
         config={
             "learning_rate": 1e-3,
@@ -83,23 +80,14 @@ def train(
         },
     )
 
-    vocab, merges = train_bpe(
-        name=name,
-        input_paths=training_files,
-        vocab_size=vocab_size,
-        special_tokens=special_tokens,
-        enable_cache=True,
-    )
-    logger.warning("++++++ BPE training finished ++++++")
-
     n_tokens_estimate = 10_000_000_000
-    tokenizer = Tokenizer(vocab=vocab, merges=merges, special_tokens=special_tokens)
+    tokenizer = Tokenizer.get_tokenizer(vocab_size)
     ids = np.memmap(memmap_output, dtype=int, mode="w+", shape=(n_tokens_estimate,))
     idx = 0
 
     def remove_special_tokens(chunk):
         docs = re.split(
-            "|".join([re.escape(special_token) for special_token in special_tokens]),
+            "|".join([re.escape(special_token) for special_token in ["<|endoftext|>"]]),
             chunk,
         )
         for doc in docs:
@@ -108,7 +96,7 @@ def train(
             for id in tokenizer.encode(doc):
                 out.append(id)
             n = len(out)
-            ids[idx: idx+n] = out
+            ids[idx : idx + n] = out
             idx += n
 
     for training_file in training_files:
@@ -131,6 +119,8 @@ def train(
 
     ids = np.memmap(memmap_output, dtype=int, mode="r")[:idx]
 
+    logger.warning(f"Number of tokens: {len(ids)}")
+
     model = LLM(
         vocab_size=vocab_size,
         context_length=context_length,
@@ -152,105 +142,37 @@ def train(
     it = 0
     if checkpoint_exist(checkpoint_path):
         it = load_checkpoint(checkpoint_path, model, optimizer)
-        
+    x = torch.from_numpy(ids.copy()).to(device)
+    import time
+    params = list(model.parameters())
     while it < iterations:
         logger.warning(f"++++ iteration {it} started ++++")
+        
         x1, x2 = data_loading(
-            x=ids, batch_size=batch_size, context_length=context_length, device=device
+            x=x, batch_size=batch_size, context_length=context_length, device=device
         )
+
+        # torch.empty((), device="mps").cpu()
+        # t0 = time.perf_counter()    
 
         optimizer.zero_grad()
         o = model.forward(x=x1)
         loss = cross_entropy(o, x2)
         run.log({"loss": loss.item()})
         loss.backward()
-        params = [p for p in model.parameters()]
+        
         gradient_clipping(params, 1.0)
         optimizer.step()
-        logger.warning(f"---- iteration {it}: loss {loss} ----")
+        logger.warning(f"---- iteration {it}: loss {loss.item()} ----")
+        
+        # torch.empty((), device="mps").cpu()
+        # t1 = time.perf_counter()
+        # logger.warning(f"step time: {t1 - t0:.4f}s")
+
         if it % checkpoint_freq == 0:
             save_checkpoint(model, optimizer, it, checkpoint_path)
         it += 1
     save_checkpoint(model, optimizer, iterations, model_output)
-    delete_checkpoint(checkpoint_path)
-
-
-def test():
-    import torch
-    import torch.nn as nn
-
-    device = torch.device("mps")
-
-    m = nn.Linear(4, 2)
-    logger.warning(f"Before:{m.weight.device}, {m.weight.shape}")
-
-    m = m.to(device)
-    logger.warning(f"After:{m.weight.device}, {m.weight.shape}")
-
-    x = torch.randn(3, 4, device=device)
-    logger.warning(m(x))
-
-
-def pre_process(src, dest):
-    from datasets import load_dataset
-    import os
-
-    idx = 0
-    for src_file in os.listdir(src):
-        dataset = load_dataset(
-            "text", data_files=src + "/" + src_file, split="train", streaming=True
-        )
-        logger.warning(f"writing file: {idx}")
-        with open(f"{dest}/{idx}", mode="w") as f:
-            for data in dataset:
-                f.write(data["text"])
-        idx += 1
-
-
-def pre_process2(src, dest):
-    from datasets import load_dataset
-
-    file_name = None
-    dataset = load_dataset(path=src, split="train", streaming=True)
-    idx = 20000
-    writer = None
-    it = iter(dataset._ex_iterable)
-
-    black_list = ["urlsf_subset00-865_data.xz"]
-
-    while True:
-        try:
-            item = next(it)
-            file = item[0].split("/")[-2]
-
-            if file != file_name:
-                logger.warning(f"Write to: {file}")
-                file_name = file
-                if writer:
-                    writer.close()
-                writer = open(f"{dest}/{idx}", mode="w")
-                idx += 1
-            writer.write(item[1]["text"])
-        except StopIteration:
-            break
-        except Exception as e:
-            logger.warning(f"Error occurred: {e}")
-            continue
-
-    # for it in dataset._ex_iterable:
-    #     file = it[0].split("/")[-2]
-    #     sample = it[1]
-
-    #     if file != file_name:
-    #         logger.warning(f"Write to: {file}")
-    #         file_name = file
-    #         if writer:
-    #             writer.close()
-    #         writer = open(f"{dest}/{idx}", mode="w")
-    #         idx += 1
-    #     writer.write(sample["text"])
-    if writer:
-        writer.close()
 
 
 if __name__ == "__main__":
@@ -282,10 +204,7 @@ if __name__ == "__main__":
     else:
         files = [input_file_or_dir]
     train(
-        name=config["name"],
         training_files=files,
-        vocab_size=config["vocab_size"],
-        special_tokens=config["special_tokens"],
         context_length=config["context_length"],
         batch_size=config["batch_size"],
         device=torch.device("mps"),

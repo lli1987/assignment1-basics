@@ -1,11 +1,15 @@
 import torch
 from model import LLM
-from bpe_encoding_2 import Tokenizer
+from bpe_encoding_3 import Tokenizer
 from functions import softmax, load_checkpoint
-from bpe_training_2 import train_bpe
 import logging
+import os
 
 logger = logging.getLogger(__name__)
+
+
+def _get_full_path(dir_path, file_name):
+    return os.path.join(dir_path, file_name)
 
 
 def generate_tokens(
@@ -59,22 +63,13 @@ def generate_tokens(
 
 
 if __name__ == "__main__":
-    from config import openwebtext_tiktoken_config
+    from config import tinystories_5M_config_v3
 
-    config = openwebtext_tiktoken_config
-    vocab, merges = train_bpe(
-        name=config["name"],
-        input_paths=config["training_file"],
-        vocab_size=config["vocab_size"],
-        special_tokens=config["special_tokens"],
-        enable_cache=True,
-    )
-
-    tokenizer = Tokenizer(
-        vocab=vocab, merges=merges, special_tokens=config["special_tokens"]
-    )
+    config = tinystories_5M_config_v3
+    vocab_size = config["vocab_size"]
+    tokenizer = Tokenizer.get_tokenizer(config["name"], vocab_size)
     model = LLM(
-        vocab_size=config["vocab_size"],
+        vocab_size=vocab_size,
         context_length=config["context_length"],
         num_layers=config["num_layers"],
         num_heads=config["num_heads"],
@@ -82,15 +77,17 @@ if __name__ == "__main__":
         d_ff=config["d_ff"],
         theta=config["theta"],
     )
+    model_path = _get_full_path(config["output_dir"], config["model_output"])
+
     load_checkpoint(
-        src=config["model_output"],
+        src=model_path,
         model=model,
     )
     generate_tokens(
-        prompt="The Brief Newsletter",
-        max_tokens=500,
-        temperature=0.1,
-        top_p=0.9,
+        prompt="How many people in US?",
+        max_tokens=100,
+        temperature=1.0,
+        top_p=0.95,
         model=model,
         tokenizer=tokenizer,
         context_length=config["context_length"],

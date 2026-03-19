@@ -21,8 +21,8 @@ class Linear(nn.Module):
                 torch.empty(out_features, in_features, device=device),
                 mean=0,
                 std=std,
-                a=-3 * std,
-                b=3 * std,
+                a=-2 * std,
+                b=2 * std,
             )
         )
 
@@ -36,13 +36,14 @@ class Embedding(nn.Module):
         self.weights = self._init_weights(num_embeddings, embedding_dim, device)
 
     def _init_weights(self, num_embeddings, embedding_dim, device):
+        std = 0.02
         return nn.Parameter(
             nn.init.trunc_normal_(
                 torch.empty(num_embeddings, embedding_dim, device=device),
                 mean=0,
-                std=1,
-                a=-3,
-                b=-3,
+                std=std,
+                a=-2 * std,
+                b=2 * std,
             )
         )
 
@@ -102,8 +103,8 @@ class SwiGLU(nn.Module):
                 torch.empty(d_out, d_in, device=device),
                 mean=0,
                 std=std,
-                a=-3 * std,
-                b=3 * std,
+                a=-2 * std,
+                b=2 * std,
             )
         )
 
@@ -135,8 +136,8 @@ class SiLU(nn.Module):
                 torch.empty(d_out, d_in, device=device),
                 mean=0,
                 std=std,
-                a=-3 * std,
-                b=3 * std,
+                a=-2 * std,
+                b=2 * std,
             )
         )
 
@@ -225,8 +226,8 @@ class MultiHeadSelfAttention(nn.Module):
                 torch.empty(d_out, d_in, device=device),
                 mean=0,
                 std=std,
-                a=-3 * std,
-                b=3 * std,
+                a=-2 * std,
+                b=2 * std,
             )
         )
 
@@ -246,13 +247,11 @@ class MultiHeadSelfAttention(nn.Module):
             self.q_proj_weight,
             "... sequence_length d_in, d_k d_in -> ... sequence_length d_k",
         )
-        # q = self.rope.forward(q, self.token_positions)
         k = einsum(
             in_features,
             self.k_proj_weight,
             "... sequence_length d_in, d_k d_in -> ... sequence_length d_k",
         )
-        # k = self.rope.forward(k, self.token_positions)
 
         v = einsum(
             in_features,

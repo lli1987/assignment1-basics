@@ -9,8 +9,28 @@ from cs336_basics.utils import get_pre_token_bytes
 import os
 import json
 import logging
+import pickle
 
 logger = logging.getLogger(__name__)
+
+PICKLE_FILE_BASE_DIR = "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/bin"
+
+
+def deserialize_bpe(name, vocab_size):
+    merges_file_name = f"{name}_{vocab_size}_merges.pkl"
+    vocab_file_name = f"{name}_{vocab_size}_vocab.pkl"
+    st_file_name = f"{name}_{vocab_size}_special_tokens.pkl"
+    try:
+        with open(PICKLE_FILE_BASE_DIR + "/" + merges_file_name, "rb") as f:
+            merges = pickle.load(f)
+        with open(PICKLE_FILE_BASE_DIR + "/" + vocab_file_name, "rb") as f:
+            vocab = pickle.load(f)
+        with open(PICKLE_FILE_BASE_DIR + "/" + st_file_name, "rb") as f:
+            special_tokens = pickle.load(f)
+        return vocab, merges, special_tokens
+    except Exception as e:
+        logger.warning(f"cannot deserialize: {e}")
+        return None, None, None
 
 
 class Tokenizer:
@@ -20,7 +40,15 @@ class Tokenizer:
         self.special_tokens = [] if not special_tokens else special_tokens
         self.special_tokens = sorted(self.special_tokens, key=lambda x: (-len(x), x))
         self.ivocab = self._build_inverted_vocab()
+        self.merge_ranks = {pair: i for i, pair in enumerate(self.merges)}
         self.cache = {}
+        self.pat = re.compile(constants.PAT)
+
+    @staticmethod
+    def get_tokenizer(name, vocab_size):
+        vocab, merges, special_tokens = deserialize_bpe(name, vocab_size)
+        tokenizer = Tokenizer(vocab, merges, special_tokens)
+        return tokenizer
 
     def from_files(cls, vocab_filepath, merges_filepath, special_tokens=None):
         vocab = {}
@@ -36,18 +64,18 @@ class Tokenizer:
 
     def encode(self, text: str) -> list[int]:
         pre_tokens = self._pre_tokenize(text)
-        
+
         tokens = []
-        logger.warning(f"number of pre-tokens: {len(pre_tokens)}")
+        # logger.warning(f"number of pre-tokens: {len(pre_tokens)}")
         for pre_token in pre_tokens:
             key = tuple(pre_token)
             if key in self.cache:
                 token = self.cache[key]
-                #logger.warning(f"hit cache for: {key}")
+                # logger.warning(f"hit cache for: {key}")
             else:
                 token = self._merge(pre_token, self.ivocab)
                 self.cache[key] = token
-            tokens = tokens + token
+            tokens.extend(token)
         return tokens
 
     def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
@@ -57,10 +85,9 @@ class Tokenizer:
                 yield token
 
     def decode(self, ids: list[int]) -> str:
-        code_list = bytes([])
+        code_list = bytearray()
         for id in ids:
-            code_bytes = self.vocab[id]
-            code_list = code_list + code_bytes
+            code_list.extend(self.vocab[id])
         return code_list.decode("utf-8", errors="replace")
 
     def _pre_tokenize(self, text):
@@ -81,7 +108,7 @@ class Tokenizer:
             if doc in self.special_tokens:
                 pre_tokens.append([doc.encode("utf-8")])
                 continue
-            for pre_token_group in re.finditer(constants.PAT, doc):
+            for pre_token_group in self.pat.finditer(doc):
                 pre_token = get_pre_token_bytes(pre_token_group)
                 pre_token = [bytes([b]) for b in pre_token]
                 pre_tokens.append(pre_token)
@@ -99,29 +126,23 @@ class Tokenizer:
 
     def _merge_based_on_first_match(self, bytes_list):
         while True:
-            start = -1
-            for merge in self.merges:
-                idx = 0
-                while idx < len(bytes_list):
-                    if idx < len(bytes_list) - 1:
-                        if merge == (bytes_list[idx], bytes_list[idx + 1]):
-                            start = idx
-                            break
-                    idx += 1
-                if start != -1:
-                    break
-            new_bytes_list = []
-            if start != -1:
-                for b_id, bs in enumerate(bytes_list):
-                    if b_id < start or b_id > start + 1:
-                        new_bytes_list.append(bs)
-                    elif b_id == start:
-                        new_bytes_list.append(bytes_list[start] + bytes_list[start + 1])
+            best_rank = None
+            best_idx = None
 
-                bytes_list = new_bytes_list
-                start = -1
-            else:
+            for i in range(len(bytes_list) - 1):
+                pair = (bytes_list[i], bytes_list[i + 1])
+                rank = self.merge_ranks.get(pair, -1)
+                if rank == -1:
+                    continue
+                if rank is not None and (best_rank is None or rank < best_rank):
+                    best_rank = rank
+                    best_idx = i
+
+            if best_idx is None:
                 break
+
+            merged = bytes_list[best_idx] + bytes_list[best_idx + 1]
+            bytes_list = bytes_list[:best_idx] + [merged] + bytes_list[best_idx + 2 :]
         return bytes_list
 
     def _build_inverted_vocab(self):
