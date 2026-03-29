@@ -21,8 +21,9 @@ import heapq
 logger = logging.getLogger(__name__)
 
 
-PICKLE_FILE_BASE_DIR = "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/bin"
-G_PRE_TOKEN_COUNT_PKL = "test_g_pre_tokens_count.pkl"
+# PICKLE_FILE_BASE_DIR = "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/bin"
+PICKLE_FILE_BASE_DIR = "/kaggle/working/assignment1-basics/cs336_basics/bin"
+G_PRE_TOKEN_COUNT_PKL = "g_pre_tokens_count.pkl"
 VOCAB_PKL = "vocab.pkl"
 MERGES_PKL = "merges.pkl"
 SPECIAL_TOKENS = "special_tokens.pkl"
@@ -405,7 +406,8 @@ if __name__ == "__main__":
     #     num_merge_processes=10
     # )
 
-    input_file = "/Users/luyaoli/code/cs336/assignment1-basics/owt_sample/owt_train.txt"
+    # input_file = "/Users/luyaoli/code/cs336/assignment1-basics/owt_sample/owt_train.txt"
+    input_file = "/kaggle/working/owt_train.txt"
 
     # input_file = "/Users/luyaoli/code/cs336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt"
 

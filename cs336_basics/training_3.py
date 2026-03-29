@@ -284,8 +284,12 @@ def train(
             x=x, batch_size=batch_size, context_length=context_length, device=device
         )
 
-        torch.empty((), device="mps").cpu()
-        t0 = time.perf_counter()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+            t0 = time.time()
+        elif torch.mps.is_available():
+            torch.empty((), device="mps").cpu()
+            t0 = time.perf_counter()
 
         optimizer.zero_grad()
         o = model.forward(x=x1)
@@ -297,8 +301,12 @@ def train(
         optimizer.step()
         logger.warning(f"---- iteration {it}: loss {loss.item()} ----")
 
-        torch.empty((), device="mps").cpu()
-        t1 = time.perf_counter()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+            t0 = time.time()
+        elif torch.mps.is_available():
+            torch.empty((), device="mps").cpu()
+            t1 = time.perf_counter()
         logger.warning(f"step time: {t1 - t0:.4f}s")
 
         if it % checkpoint_freq == 0:
@@ -308,21 +316,15 @@ def train(
 
 
 if __name__ == "__main__":
-    if torch.backends.mps.is_available():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        logger.warning("using CUDA")
+    elif torch.mps.is_available():
         device = torch.device("mps")
         logger.warning("using Apple GPU")
     else:
         device = torch.device("cpu")
         logger.warning("using Apple CPU")
-    # pre_process(
-    #     "/Users/luyaoli/code/cs336/assignment1-basics/openwebtext_extracted/openwebtext",
-    #     "/Users/luyaoli/code/cs336/assignment1-basics/openwebtext_processed",
-    # )
-
-    # pre_process2(
-    #     "/Users/luyaoli/code/cs336/assignment1-basics/openwebtext",
-    #     "/Users/luyaoli/code/cs336/assignment1-basics/owt_text",
-    # )
 
     files = []
     input_file_or_dir = config.get("training_file")
