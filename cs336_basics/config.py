@@ -118,7 +118,7 @@ tinystories_layer_ablation_config = {
 openwebtext_config = {
     "name": "owt_sample",
     "is_input_dir": False,
-    "training_file": "/kaggle/working/owt_train.txt",
+    "training_file": "/kaggle/working/assignment1-basics/owt_train.txt",
     "context_length": 512,
     "batch_size": 32,
     "num_layers": 8,

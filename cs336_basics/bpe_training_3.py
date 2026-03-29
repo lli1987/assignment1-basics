@@ -407,7 +407,7 @@ if __name__ == "__main__":
     # )
 
     # input_file = "/Users/luyaoli/code/cs336/assignment1-basics/owt_sample/owt_train.txt"
-    input_file = "/kaggle/working/owt_train.txt"
+    input_file = "/kaggle/working/assignment1-basics/owt_train.txt"
 
     # input_file = "/Users/luyaoli/code/cs336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt"
 
