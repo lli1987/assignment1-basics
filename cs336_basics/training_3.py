@@ -207,6 +207,7 @@ def train(
 ):
     # Start a new wandb run to track this script.
     run = wandb.init(
+        mode="disabled",
         # Set the wandb entity where your project will be logged (generally your team name).
         entity="luyaoiosapp-personal",
         # Set the wandb project where this run will be logged.
