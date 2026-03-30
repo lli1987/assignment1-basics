@@ -222,15 +222,15 @@ def train(
     )
 
     tokenizer = Tokenizer.get_tokenizer(name, vocab_size)
-    # encode_training_data(
-    #     memmap_output=memmap_output,
-    #     tmp_output_dir=tmp_output_dir,
-    #     name=name,
-    #     num_encoding_processes=64,
-    #     training_files=training_files,
-    #     num_chunks=1000,
-    #     tokenizer=tokenizer,
-    # )
+    encode_training_data(
+        memmap_output=memmap_output,
+        tmp_output_dir=tmp_output_dir,
+        name=name,
+        num_encoding_processes=64,
+        training_files=training_files,
+        num_chunks=1000,
+        tokenizer=tokenizer,
+    )
 
     ids = np.memmap(
         _get_full_path(tmp_output_dir, memmap_output), dtype=np.int64, mode="r"
