@@ -13,7 +13,7 @@ import pickle
 
 logger = logging.getLogger(__name__)
 
-PICKLE_FILE_BASE_DIR = "/kaggle/working/assignment1-basics/cs336_basics/bin"
+PICKLE_FILE_BASE_DIR = "/workspace/code/assignment1-basics/cs336_basics/bin"
 
 
 def deserialize_bpe(name, vocab_size):
