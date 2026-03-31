@@ -116,7 +116,7 @@ tinystories_layer_ablation_config = {
 # }
 
 openwebtext_config = {
-    "name": "owt_sample",
+    "name": "owt",
     "is_input_dir": False,
     "training_file": "/workspace/data/owt_train.txt",
     "context_length": 512,
@@ -131,9 +131,9 @@ openwebtext_config = {
     "tmp_output_dir": "/workspace/code/assignment1-basics/cs336_basics/tmp/",
     "bin_output_dir": "/workspace/code/assignment1-basics/cs336_basics/bin/",
     "output_dir": "/workspace/code/assignment1-basics/cs336_basics/output/",
-    "model_output": "owt_sample_model",
-    "memmap_output": "owt_sample_memmap.bin",
-    "checkpoint_output": "owt_sample_checkpoint",
+    "model_output": "owt_model",
+    "memmap_output": "owt_memmap.bin",
+    "checkpoint_output": "owt_checkpoint",
     "checkpoint_freq": 10,
 }
 
