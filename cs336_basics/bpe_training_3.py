@@ -8,6 +8,7 @@ from cs336_basics.utils import (
     get_pre_token_bytes,
 )
 import cs336_basics.constants as constants
+from cs336_basics.config import openwebtext_config
 
 # from utils import (
 #     find_chunk_boundaries,
@@ -19,10 +20,10 @@ import logging
 import heapq
 
 logger = logging.getLogger(__name__)
-
+cfg = openwebtext_config
 
 # PICKLE_FILE_BASE_DIR = "/Users/luyaoli/code/cs336/assignment1-basics/cs336_basics/bin"
-PICKLE_FILE_BASE_DIR = "/kaggle/working/assignment1-basics/cs336_basics/bin"
+# PICKLE_FILE_BASE_DIR = "/kaggle/working/assignment1-basics/cs336_basics/bin"
 G_PRE_TOKEN_COUNT_PKL = "g_pre_tokens_count.pkl"
 VOCAB_PKL = "vocab.pkl"
 MERGES_PKL = "merges.pkl"
@@ -59,7 +60,7 @@ def prefix_with_name(name, pkl):
 def serialize_bpe(obj, file):
     import pickle
 
-    with open(PICKLE_FILE_BASE_DIR + "/" + file, "wb") as f:
+    with open(cfg["bin_output_dir"] + file, "wb") as f:
         pickle.dump(obj, f)
 
 
@@ -407,7 +408,7 @@ if __name__ == "__main__":
     # )
 
     # input_file = "/Users/luyaoli/code/cs336/assignment1-basics/owt_sample/owt_train.txt"
-    input_file = "/kaggle/working/assignment1-basics/owt_train.txt"
+    input_file = cfg["training_file"]
 
     # input_file = "/Users/luyaoli/code/cs336/assignment1-basics/tests/fixtures/tinystories_sample_5M.txt"
 
