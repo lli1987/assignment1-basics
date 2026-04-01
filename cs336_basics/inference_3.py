@@ -54,6 +54,7 @@ def generate_tokens(
         word = tokenizer.decode([next_id[0][0].item()])
         if word == "<|endoftext|>":
             break
+        logger.warning(word)
         text_list.append(word)
 
         # add new token to the token list's end
