@@ -63,9 +63,9 @@ def generate_tokens(
 
 
 if __name__ == "__main__":
-    from config import tinystories_5M_config_v3
+    from config import openwebtext_config
 
-    config = tinystories_5M_config_v3
+    config = openwebtext_config
     vocab_size = config["vocab_size"]
     tokenizer = Tokenizer.get_tokenizer(config["name"], vocab_size)
     model = LLM(
