@@ -221,16 +221,16 @@ def train(
         },
     )
 
-    tokenizer = Tokenizer.get_tokenizer(name, vocab_size)
-    encode_training_data(
-        memmap_output=memmap_output,
-        tmp_output_dir=tmp_output_dir,
-        name=name,
-        num_encoding_processes=64,
-        training_files=training_files,
-        num_chunks=1000,
-        tokenizer=tokenizer,
-    )
+    # tokenizer = Tokenizer.get_tokenizer(name, vocab_size)
+    # encode_training_data(
+    #     memmap_output=memmap_output,
+    #     tmp_output_dir=tmp_output_dir,
+    #     name=name,
+    #     num_encoding_processes=64,
+    #     training_files=training_files,
+    #     num_chunks=1000,
+    #     tokenizer=tokenizer,
+    # )
 
     ids = np.memmap(
         _get_full_path(tmp_output_dir, memmap_output), dtype=np.int64, mode="r"
@@ -344,7 +344,7 @@ if __name__ == "__main__":
         vocab_size=config["vocab_size"],
         context_length=config["context_length"],
         batch_size=config["batch_size"],
-        device=torch.device("mps"),
+        device=torch.device("cuda"),
         num_layers=config["num_layers"],
         num_heads=config["num_heads"],
         d_model=config["d_model"],
