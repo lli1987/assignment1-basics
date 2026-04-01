@@ -304,7 +304,7 @@ def train(
 
         if torch.cuda.is_available():
             torch.cuda.synchronize()
-            t0 = time.time()
+            t1 = time.time()
         elif torch.mps.is_available():
             torch.empty((), device="mps").cpu()
             t1 = time.perf_counter()
